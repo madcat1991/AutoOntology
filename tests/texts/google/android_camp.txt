@@ -1,0 +1,11 @@
+At Google, we are committed to helping the innovators of the future make the most of their gifts. We believe open source development is a useful and accessible way for passionate students to get practical and rewarding experience in computer science.
+
+With this in mind, Google is excited to announce our third annual Android Camp. Android Camp will offer thirty current freshmen and sophomores the chance to participate in a week-long educational summer program at Google’s headquarters in Mountain View, California from June 9 to June 15, 2013.
+
+This program will include an interactive and collaborative curriculum focused on providing a practical introduction to developing applications for the Android operating system. In addition, students will explore the concepts behind Android, the framework for constructing an application, and the tools for developing, testing, and publishing software for the platform. Students will also get the opportunity to enjoy technical talks by Googlers, network with talented students and attend social activities around Silicon Valley.
+
+Android Camp is open to current freshmen and sophomores studying computer science or a related major at a four-year university in the U.S. and Canada.  We are looking for students with strong academic records, at least one year of experience in Java, limited to no experience programming in Android, and a demonstrated passion for CS development.
+
+Our goal with Android Camp is to take high potential students with no experience programming in Android and to have them developing fully functioning Android applications by the end of the week!  It is an exciting, fast-paced program where students will participate in interactive courses designed to help them develop and build competencies in the Android platform.  Interested in learning more? Check out this blog post from one of our former Android Campers as he talks about his experiences.
+
+Applications for Android Camp are open now and the deadline to apply is March 17th.  For more information and to submit your application, please visit google.com/students/androidcamp

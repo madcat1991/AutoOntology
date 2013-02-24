@@ -5,6 +5,7 @@ import codecs
 import itertools
 
 from nltk import pos_tag, sent_tokenize, word_tokenize, RegexpParser
+from pymorphy import get_morph
 
 
 SIMPLE_GRAMMAR = u"CHUNK :{<JJ.*>+ <N.*>}"
@@ -36,19 +37,32 @@ def get_adj_noun_list_from_chunk(chunk_subtree):
     return result
 
 
-def normilize_adj_noun_list(adj_noun_list):
+def normilize_adj_noun_list(adj_noun_list, morph):
     """Приводит к нормально форме список кортжей (прилагательное, существительно)
     """
-    pass
+    res = []
+    for adj, noun in adj_noun_list:
+        normilized_adj = morph.normalize(adj.upper())
+        normilized_noun = morph.normalize(noun.upper())
+        if isinstance(normilized_adj, set):
+            normilized_adj = normilized_adj.pop()
+        if isinstance(normilized_noun, set):
+            normilized_noun = normilized_noun.pop()
+        res.append((normilized_adj, normilized_noun))
+    return res
 
 
-def gather_data(file_path, grammar=COMPLEX_GRAMMAR):
-    """Собирает данные из файла
+def data_gathering_iterator(file_path, morph, grammar=COMPLEX_GRAMMAR):
+    """На каждой итерации возвращает список полученных из одной строки комбинаций прилаг + сущ.
+    Элемент списка кортеж (прилагательное, существительно).
+    Прилагательное и существительное приведены к нормальной форме
 
     :param file_path: путь до файла с данными. Файл должен быть в формате UTF-8
+    :param morph: морфология
     """
     chunk_parser = RegexpParser(grammar)
     f = codecs.open(file_path, encoding='utf-8')
+
     for line in f:
         #разбиваем на предложения
         for sentence in sent_tokenize(line):
@@ -60,7 +74,7 @@ def gather_data(file_path, grammar=COMPLEX_GRAMMAR):
                 for subtree in tree.subtrees():
                     if subtree.node == u"CHUNK":
                         adj_noun_list = get_adj_noun_list_from_chunk(subtree)
-                        adj_noun_normilized_list = normilize_adj_noun_list(adj_noun_list)
+                        yield normilize_adj_noun_list(adj_noun_list, morph)
 
 
 if __name__ == "__main__":
@@ -68,7 +82,10 @@ if __name__ == "__main__":
 
     parser.add_argument("-f", "--file", dest="file_path", type=str, required=True,
                         help="Файл из которого будет браться текст")
+    parser.add_argument("-m", "--morph_dir", dest="morph_dir", type=str, required=True,
+                        help="Директория в которой лежат словари pymorphy")
 
     args = parser.parse_args()
 
-    gather_data(args.file_path)
+    morph = get_morph(args.morph_dir)
+    data_gathering_iterator(args.file_path, morph)
