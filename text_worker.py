@@ -2,6 +2,7 @@
 
 import argparse
 import codecs
+import itertools
 
 from nltk import pos_tag, sent_tokenize, word_tokenize, RegexpParser
 
@@ -14,6 +15,31 @@ COMPLEX_GRAMMAR = u"""
     ADJECTIVE: {<JJ.*>(<REL><JJ.*>)*}
     CHUNK: {<ADJECTIVE><NOUN>}
 """
+
+
+def get_adj_noun_list_from_chunk(chunk_subtree):
+    """Вытаскивает из chunk наборы: прилаг + существительное
+    """
+    adjectives = []
+    nouns = []
+    for s in chunk_subtree.leaves():
+        word, tag = s
+        if tag and tag[0] == "J":
+            adjectives.append(word)
+        elif tag and tag[0] == "N":
+            nouns.append(word)
+
+    result = []
+    #находим все комбинации
+    for adj_noun in itertools.product(adjectives, nouns):
+        result.append(adj_noun)
+    return result
+
+
+def normilize_adj_noun_list(adj_noun_list):
+    """Приводит к нормально форме список кортжей (прилагательное, существительно)
+    """
+    pass
 
 
 def gather_data(file_path, grammar=COMPLEX_GRAMMAR):
@@ -31,14 +57,10 @@ def gather_data(file_path, grammar=COMPLEX_GRAMMAR):
                 tokens = word_tokenize(sentence)
                 tagged_tokens = pos_tag(tokens)
                 tree = chunk_parser.parse(tagged_tokens)
-                #import ipdb; ipdb.set_trace()
-                print sentence
-                print unicode(tree)
                 for subtree in tree.subtrees():
                     if subtree.node == u"CHUNK":
-                        print unicode(subtree)
-                print '\n'
-
+                        adj_noun_list = get_adj_noun_list_from_chunk(subtree)
+                        adj_noun_normilized_list = normilize_adj_noun_list(adj_noun_list)
 
 
 if __name__ == "__main__":
