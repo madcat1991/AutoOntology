@@ -6,6 +6,7 @@ import csv
 import itertools
 
 from nltk import pos_tag, sent_tokenize, word_tokenize, RegexpParser
+from redis import Redis
 from pymorphy import get_morph
 
 
@@ -79,13 +80,11 @@ def data_gathering_iterator(file_path, morph, grammar=COMPLEX_GRAMMAR):
                         yield normilize_adj_noun_list(adj_noun_list, morph)
 
 
-def get_data_and_statistic(file_path, morph):
-    res = {}
+def get_data_and_statistic(file_path, morph, rd):
     for adj_noun_list in data_gathering_iterator(file_path, morph):
         for adj_noun in adj_noun_list:
-            res.setdefault(adj_noun, 0)
-            res[adj_noun] += 1
-    return res
+            adj_noun_str = u" ".join(adj_noun)
+            rd.incr(adj_noun_str, 1)
 
 
 if __name__ == "__main__":
@@ -95,15 +94,18 @@ if __name__ == "__main__":
                         help="Файл из которого будет браться текст")
     parser.add_argument("-m", "--morph_dir", dest="morph_dir", type=str, required=True,
                         help="Директория в которой лежат словари pymorphy")
-    parser.add_argument("-o", "--output-file", dest="output_file", type=str, required=True,
-                        help="Файл в который будет записана статистика")
+    parser.add_argument("-s", "--host", dest="host", default="localhost", type=str,
+                        help="Хост на котором находится Redis. По умолчанию 'localhost'")
+    parser.add_argument("-p", "--port", dest="port", default=6379, type=int,
+                        help="Порт на котором находится Redis. По умолчанию 6379")
+    parser.add_argument("-d", "--db", dest="db", default=0, type=int,
+                        help="БД в редисе. По умолчанию - 0")
 
     args = parser.parse_args()
-
     morph = get_morph(args.morph_dir)
+    rd = Redis(host=args.host, port=args.port, db=args.db)
+    rd.flushdb()
 
-    with open(args.output_file, "w") as csv_file:
-        csv_writer = csv.writer(csv_file, delimiter="|")
-        for key, count in get_data_and_statistic(args.file_path, morph).items():
-            adj_noun = u" ".join(key)
-            csv_writer.writerow([adj_noun, count])
+    get_data_and_statistic(args.file_path, morph, rd)
+
+    rd.save()
