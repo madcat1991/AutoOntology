@@ -2,7 +2,6 @@
 
 import argparse
 import codecs
-import csv
 import itertools
 
 from nltk import pos_tag, sent_tokenize, word_tokenize, RegexpParser
