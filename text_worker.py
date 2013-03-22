@@ -2,6 +2,7 @@
 
 import argparse
 import codecs
+import csv
 import itertools
 
 from nltk import pos_tag, sent_tokenize, word_tokenize, RegexpParser
@@ -69,12 +70,22 @@ def data_gathering_iterator(file_path, morph, grammar=COMPLEX_GRAMMAR):
             sentence = sentence.strip()
             if sentence:
                 tokens = word_tokenize(sentence)
+
                 tagged_tokens = pos_tag(tokens)
                 tree = chunk_parser.parse(tagged_tokens)
                 for subtree in tree.subtrees():
                     if subtree.node == u"CHUNK":
                         adj_noun_list = get_adj_noun_list_from_chunk(subtree)
                         yield normilize_adj_noun_list(adj_noun_list, morph)
+
+
+def get_data_and_statistic(file_path, morph):
+    res = {}
+    for adj_noun_list in data_gathering_iterator(file_path, morph):
+        for adj_noun in adj_noun_list:
+            res.setdefault(adj_noun, 0)
+            res[adj_noun] += 1
+    return res
 
 
 if __name__ == "__main__":
@@ -84,8 +95,15 @@ if __name__ == "__main__":
                         help="Файл из которого будет браться текст")
     parser.add_argument("-m", "--morph_dir", dest="morph_dir", type=str, required=True,
                         help="Директория в которой лежат словари pymorphy")
+    parser.add_argument("-o", "--output-file", dest="output_file", type=str, required=True,
+                        help="Файл в который будет записана статистика")
 
     args = parser.parse_args()
 
     morph = get_morph(args.morph_dir)
-    data_gathering_iterator(args.file_path, morph)
+
+    with open(args.output_file, "w") as csv_file:
+        csv_writer = csv.writer(csv_file, delimiter="|")
+        for key, count in get_data_and_statistic(args.file_path, morph).items():
+            adj_noun = u" ".join(key)
+            csv_writer.writerow([adj_noun, count])
