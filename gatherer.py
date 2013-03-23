@@ -42,7 +42,7 @@ class Gatherer(Thread):
             result.append(adj_noun)
         return result
 
-    def normilize_adj_noun_list(self, adj_noun_list, morph):
+    def normalize_adj_noun_list(self, adj_noun_list, morph):
         """Приводит к нормально форме список кортжей (прилагательное, существительно)
         """
         res = []
@@ -58,11 +58,7 @@ class Gatherer(Thread):
 
     def run(self):
         while True:
-            try:
-                line = self.receive_queue.get(block=True, timeout=5)
-            except Empty:
-                print "%s has finished" % self.name
-                break
+            line = self.receive_queue.get(block=True)
 
             for sentence in sent_tokenize(line):
                 sentence = sentence.strip()
@@ -74,5 +70,7 @@ class Gatherer(Thread):
                     for subtree in tree.subtrees():
                         if subtree.node == u"CHUNK":
                             adj_noun_list = self.get_adj_noun_list_from_chunk(subtree)
-                            normalized_adj_noun_list = self.normilize_adj_noun_list(adj_noun_list, self.morph)
+                            normalized_adj_noun_list = self.normalize_adj_noun_list(adj_noun_list, self.morph)
                             self.send_queue.put(normalized_adj_noun_list)
+
+            self.receive_queue.task_done()

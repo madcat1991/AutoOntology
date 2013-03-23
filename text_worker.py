@@ -10,7 +10,7 @@ from gatherer import Gatherer
 from writer import RdWriter
 
 
-def data_gathering(file_path, morph, rd, number_of_threads=2):
+def data_gathering(file_path, morph, rd, number_of_threads=4):
     """На каждой итерации возвращает список полученных из одной строки комбинаций прилаг + сущ.
     Элемент списка кортеж (прилагательное, существительно).
     Прилагательное и существительное приведены к нормальной форме
@@ -22,27 +22,25 @@ def data_gathering(file_path, morph, rd, number_of_threads=2):
     put_queue = Queue()
     get_queue = Queue()
 
-    threads = []
-
     #поток на получение
     receive_thread = RdWriter(rd=rd, receive_queue=get_queue)
+    receive_thread.setDaemon(True)
     receive_thread.start()
-    threads.append(receive_thread)
 
     #потоки на обработку
     for index in range(number_of_threads):
         gatherer = \
             Gatherer(receive_queue=put_queue, send_queue=get_queue, morph=morph, name="thread_%s" % index)
+        gatherer.setDaemon(True)
         gatherer.start()
-        threads.append(gatherer)
 
     f = codecs.open(file_path, encoding='utf-8')
     for line in f:
         put_queue.put(line)
 
     # ждем на завершение
-    for thread in threads:
-        thread.join()
+    put_queue.join()
+    get_queue.join()
 
     print "I have finished, my Master"
 

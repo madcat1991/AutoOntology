@@ -11,12 +11,10 @@ class RdWriter(Thread):
 
     def run(self):
         while True:
-            try:
-                normalized_adj_noun_list = self.receive_queue.get(block=True, timeout=20)
-            except Empty:
-                print "RdWriter has finished"
-                break
+            normalized_adj_noun_list = self.receive_queue.get()
 
             for adj_noun in normalized_adj_noun_list:
                 adj_noun_str = u" ".join(adj_noun)
                 self.rd.incr(adj_noun_str, 1)
+
+            self.receive_queue.task_done()
