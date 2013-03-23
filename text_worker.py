@@ -1,60 +1,16 @@
 #coding: utf-8
+from Queue import Queue
 
 import argparse
 import codecs
-import csv
-import itertools
 
-from nltk import pos_tag, sent_tokenize, word_tokenize, RegexpParser
 from redis import Redis
 from pymorphy import get_morph
+from gatherer import Gatherer
+from writer import RdWriter
 
 
-SIMPLE_GRAMMAR = u"CHUNK :{<JJ.*>+ <N.*>}"
-COMPLEX_GRAMMAR = u"""
-    REL: {<,><CC>}
-    REL: {<,> | <CC>}
-    NOUN: {<N.*>(<REL><N.*>)*}
-    ADJECTIVE: {<JJ.*>(<REL><JJ.*>)*}
-    CHUNK: {<ADJECTIVE><NOUN>}
-"""
-
-
-def get_adj_noun_list_from_chunk(chunk_subtree):
-    """Вытаскивает из chunk наборы: прилаг + существительное
-    """
-    adjectives = []
-    nouns = []
-    for s in chunk_subtree.leaves():
-        word, tag = s
-        if tag and tag[0] == "J":
-            adjectives.append(word)
-        elif tag and tag[0] == "N":
-            nouns.append(word)
-
-    result = []
-    #находим все комбинации
-    for adj_noun in itertools.product(adjectives, nouns):
-        result.append(adj_noun)
-    return result
-
-
-def normilize_adj_noun_list(adj_noun_list, morph):
-    """Приводит к нормально форме список кортжей (прилагательное, существительно)
-    """
-    res = []
-    for adj, noun in adj_noun_list:
-        normilized_adj = morph.normalize(adj.upper())
-        normilized_noun = morph.normalize(noun.upper())
-        if isinstance(normilized_adj, set):
-            normilized_adj = normilized_adj.pop()
-        if isinstance(normilized_noun, set):
-            normilized_noun = normilized_noun.pop()
-        res.append((normilized_adj, normilized_noun))
-    return res
-
-
-def data_gathering_iterator(file_path, morph, grammar=COMPLEX_GRAMMAR):
+def data_gathering(file_path, morph, rd, number_of_threads=2):
     """На каждой итерации возвращает список полученных из одной строки комбинаций прилаг + сущ.
     Элемент списка кортеж (прилагательное, существительно).
     Прилагательное и существительное приведены к нормальной форме
@@ -62,29 +18,33 @@ def data_gathering_iterator(file_path, morph, grammar=COMPLEX_GRAMMAR):
     :param file_path: путь до файла с данными. Файл должен быть в формате UTF-8
     :param morph: морфология
     """
-    chunk_parser = RegexpParser(grammar)
+
+    put_queue = Queue()
+    get_queue = Queue()
+
+    threads = []
+
+    #поток на получение
+    receive_thread = RdWriter(rd=rd, receive_queue=get_queue)
+    receive_thread.start()
+    threads.append(receive_thread)
+
+    #потоки на обработку
+    for index in range(number_of_threads):
+        gatherer = \
+            Gatherer(receive_queue=put_queue, send_queue=get_queue, morph=morph, name="thread_%s" % index)
+        gatherer.start()
+        threads.append(gatherer)
+
     f = codecs.open(file_path, encoding='utf-8')
-
     for line in f:
-        #разбиваем на предложения
-        for sentence in sent_tokenize(line):
-            sentence = sentence.strip()
-            if sentence:
-                tokens = word_tokenize(sentence)
+        put_queue.put(line)
 
-                tagged_tokens = pos_tag(tokens)
-                tree = chunk_parser.parse(tagged_tokens)
-                for subtree in tree.subtrees():
-                    if subtree.node == u"CHUNK":
-                        adj_noun_list = get_adj_noun_list_from_chunk(subtree)
-                        yield normilize_adj_noun_list(adj_noun_list, morph)
+    # ждем на завершение
+    for thread in threads:
+        thread.join()
 
-
-def get_data_and_statistic(file_path, morph, rd):
-    for adj_noun_list in data_gathering_iterator(file_path, morph):
-        for adj_noun in adj_noun_list:
-            adj_noun_str = u" ".join(adj_noun)
-            rd.incr(adj_noun_str, 1)
+    print "I have finished, my Master"
 
 
 if __name__ == "__main__":
@@ -106,6 +66,6 @@ if __name__ == "__main__":
     rd = Redis(host=args.host, port=args.port, db=args.db)
     rd.flushdb()
 
-    get_data_and_statistic(args.file_path, morph, rd)
+    data_gathering(args.file_path, morph, rd)
 
     rd.save()
