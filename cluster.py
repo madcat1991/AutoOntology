@@ -1,6 +1,9 @@
 #coding: utf-8
 
 #значение для автоинкремента
+from Queue import Queue
+from threading import Thread
+
 autoincrement_value = -1
 
 
@@ -56,22 +59,53 @@ def proximity(matrix, R, Q, alpha_A=0.5, alpha_B=0.5, beta=0.0, gamma=-0.5):
     return res
 
 
-def get_clusters(matrix):
+class MyThread(Thread):
+    def __init__(self, *args, **kwargs):
+        self.matrix = kwargs.pop("matrix")
+        self.get_queue = kwargs.pop("get_queue")
+        self.put_queue = kwargs.pop("put_queue")
+        super(MyThread, self).__init__(*args, **kwargs)
+
+    def run(self):
+        while True:
+            i, j, cluster_i, cluster_j = self.get_queue.get()
+            p = proximity(self.matrix, cluster_i, cluster_j)
+            self.put_queue.put((i, j, p))
+            self.get_queue.task_done()
+
+
+def get_clusters(matrix, number_of_threads=4):
     clusters = [Cluster(index=index) for index in range(len(matrix))]
+    task_queue = Queue()
+    result_queue = Queue()
+
+    for i in range(number_of_threads):
+        t = MyThread(matrix=matrix, get_queue=task_queue, put_queue=result_queue)
+        t.setDaemon(True)
+        t.start()
 
     while len(clusters) > 2:
         cluster_len = len(clusters)
 
-        best_value = 0
-        best_i = best_j = 0
         for i in range(cluster_len):
             #оптимизация
+            print "Cluster %s from %s" % (i, cluster_len)
             for j in range(i + 1, cluster_len):
                 if i != j:
-                    p = proximity(matrix, clusters[i], clusters[j])
-                    if p > best_value:
-                        best_value = p
-                        best_i, best_j = i, j
+                    task_queue.put((i, j, clusters[i], clusters[j]))
+
+        task_queue.join()
+        print "Iteration data worked"
+
+        best_value = 0
+        best_i = best_j = 0
+        while not result_queue.empty():
+            i, j, p = result_queue.get()
+            if p > best_value:
+                best_value = p
+                best_i, best_j = i, j
+
+        print "Results got"
 
         #вначале надо сделать pop большего индекса
         if best_j > best_i:

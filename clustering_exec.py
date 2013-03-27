@@ -69,12 +69,14 @@ if __name__ == "__main__":
                         help="Путь до файла с csv")
     parser.add_argument("-d", "--dot-file", dest="dot_file_path", type=str, required=True,
                         help="Файл в который будет сохранено dot-представление кластера")
+    parser.add_argument("-j", "--threads", dest="number_of_threads", type=int, default=4,
+                        help="Количество потоков")
 
     args = parser.parse_args()
 
     data_dict = prepare_data(args.csv_file_path)
     keys_list, matrix = get_nouns_similarity_matrix(data_dict)
-    cluster = get_clusters(matrix)
+    cluster = get_clusters(matrix, args.number_of_threads)
 
     f = open(args.dot_file_path, "w")
     f.write(cluster.get_dot_graph_str(keys_list))
