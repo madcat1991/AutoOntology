@@ -1,8 +1,8 @@
 #coding: utf-8
-from collections import defaultdict
+import argparse
 
 import math
-from pprint import pprint
+from cluster import get_clusters
 
 
 def prepare_data(file_path, delimiter="|"):
@@ -63,5 +63,19 @@ def get_nouns_similarity_matrix(data_dict):
 
 
 if __name__ == "__main__":
-    data_dict = prepare_data("tests/big_data/reuters.csv")
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("-c", "--csv-file", dest="csv_file_path", type=str, required=True,
+                        help="Путь до файла с csv")
+    parser.add_argument("-d", "--dot-file", dest="dot_file_path", type=str, required=True,
+                        help="Файл в который будет сохранено dot-представление кластера")
+
+    args = parser.parse_args()
+
+    data_dict = prepare_data(args.csv_file_path)
     keys_list, matrix = get_nouns_similarity_matrix(data_dict)
+    cluster = get_clusters(matrix)
+
+    f = open(args.dot_file_path, "w")
+    f.write(cluster.get_dot_graph_str(keys_list))
+    f.close()
