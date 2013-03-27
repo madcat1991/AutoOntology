@@ -74,8 +74,8 @@ class MyThread(Thread):
             self.get_queue.task_done()
 
 
-def get_clusters(matrix, number_of_threads=4):
-    clusters = [Cluster(index=index) for index in range(len(matrix))]
+def get_clusters_proximity_matrix(matrix, clusters, number_of_threads=4):
+    print "Start to build proximity matrix"
     task_queue = Queue()
     result_queue = Queue()
 
@@ -84,35 +84,72 @@ def get_clusters(matrix, number_of_threads=4):
         t.setDaemon(True)
         t.start()
 
+    clusters_matrix = []
+    cluster_len = len(clusters)
+    for i in range(cluster_len):
+        clusters_matrix.append([0.0] * cluster_len)
+        #оптимизация
+        for j in range(i + 1, cluster_len):
+            if i != j:
+                task_queue.put((i, j, clusters[i], clusters[j]))
+
+        clusters_matrix[i][i] = 1.0
+
+    task_queue.join()
+
+    while not result_queue.empty():
+        i, j, p = result_queue.get()
+        clusters_matrix[i][j] = clusters_matrix[j][i] = p
+
+    print "Proximity matrix built"
+    return clusters_matrix
+
+
+def get_clusters(matrix, number_of_threads=4):
+    clusters = [Cluster(index=index) for index in range(len(matrix))]
+    clusters_matrix = get_clusters_proximity_matrix(matrix, clusters, number_of_threads)
+
     while len(clusters) > 2:
         cluster_len = len(clusters)
-
-        for i in range(cluster_len):
-            #оптимизация
-            print "Cluster %s from %s" % (i, cluster_len)
-            for j in range(i + 1, cluster_len):
-                if i != j:
-                    task_queue.put((i, j, clusters[i], clusters[j]))
-
-        task_queue.join()
-        print "Iteration data worked"
+        print "Clusters left %s" % cluster_len
 
         best_value = 0
         best_i = best_j = 0
-        while not result_queue.empty():
-            i, j, p = result_queue.get()
-            if p > best_value:
-                best_value = p
-                best_i, best_j = i, j
+        for i in range(cluster_len):
+            #оптимизация
+            for j in range(i + 1, cluster_len):
+                if i != j:
+                    if clusters_matrix[i][j] > best_value:
+                        best_value = clusters_matrix[i][j]
+                        best_i, best_j = i, j
 
-        print "Results got"
+        print "Results got. Start to update cluster matrix"
 
         #вначале надо сделать pop большего индекса
         if best_j > best_i:
             best_i, best_j = best_j, best_i
+
+        #работа со списком класетров
         A = clusters.pop(best_i)
         B = clusters.pop(best_j)
-        clusters.append(Cluster(A=A, B=B))
+        R = Cluster(A=A, B=B)
+        clusters.append(R)
+
+        #работа с матрицей
+        clusters_matrix.pop(best_i)
+        clusters_matrix.pop(best_j)
+
+        new_row = [0] * (len(clusters_matrix) + 1)
+        new_row[-1] = 1.0
+        for index, row in enumerate(clusters_matrix):
+            row.pop(best_i)
+            row.pop(best_j)
+            p = proximity(matrix, R, clusters[index])
+            #колонка
+            row.append(p)
+            #ряд
+            new_row[index] = p
+        clusters_matrix.append(new_row)
 
     if len(clusters) == 2:
         res = Cluster(A=clusters[0], B=clusters[1])
