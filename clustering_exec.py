@@ -81,6 +81,9 @@ def get_nouns_similarity_matrix(data_dict):
 
 
 if __name__ == "__main__":
+    import sys
+    sys.setrecursionlimit(10000)
+
     parser = argparse.ArgumentParser()
 
     parser.add_argument("-c", "--csv-file", dest="csv_file_path", type=str, required=True,
