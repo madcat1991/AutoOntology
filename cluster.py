@@ -55,7 +55,7 @@ def complete_link_proximity(cluster_matrix, A_index, B_index, Q_index):
     return new_proximity(cluster_matrix, A_index, B_index, Q_index, 0.5, 0.5, 0, -0.5)
 
 
-def simple_link_proximity(cluster_matrix, A_index, B_index, Q_index):
+def single_link_proximity(cluster_matrix, A_index, B_index, Q_index):
     return new_proximity(cluster_matrix, A_index, B_index, Q_index, 0.5, 0.5, 0, 0.5)
 
 

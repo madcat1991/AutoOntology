@@ -2,11 +2,11 @@
 import argparse
 
 import math
-from cluster import get_clusters, simple_link_proximity, complete_link_proximity
+from cluster import get_clusters, single_link_proximity, complete_link_proximity
 
 
 METHODS = {
-    "SIMPLE_LINK": simple_link_proximity,
+    "SINGLE_LINK": single_link_proximity,
     "COMPLETE_LINK": complete_link_proximity
 }
 
