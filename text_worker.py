@@ -62,9 +62,14 @@ def data_gathering_iterator(file_path, morph, grammar=COMPLEX_GRAMMAR):
     :param morph: морфология
     """
     chunk_parser = RegexpParser(grammar)
-    f = codecs.open(file_path, encoding='utf-8')
+    f = open(file_path, "r")
 
     for line in f:
+        try:
+            line = line.decode('utf-8')
+        except UnicodeDecodeError:
+            continue
+        line = line.strip()
         #разбиваем на предложения
         for sentence in sent_tokenize(line):
             sentence = sentence.strip()

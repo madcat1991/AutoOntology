@@ -15,13 +15,15 @@ def prepare_data(file_path, min_log, delimiter="|"):
     for line in f:
         if line:
             parts = line.strip().split(delimiter)
-            phrase_parts = parts[0].split()
-            if len(phrase_parts) == 2:
-                adj, noun = phrase_parts
-                count = float(parts[1])
-                if count > 0 and math.log(count) > min_log:
-                    res.setdefault(noun, {})
-                    res[noun][adj] = math.log(count)
+            #TODO написать адекватнее
+            if len(parts) == 2:
+                phrase_parts = parts[0].split()
+                if len(phrase_parts) == 2:
+                    adj, noun = phrase_parts
+                    count = float(parts[1])
+                    if count > 0 and math.log(count) > min_log:
+                        res.setdefault(noun, {})
+                        res[noun][adj] = math.log(count)
     return res
 
 
