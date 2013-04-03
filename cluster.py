@@ -1,9 +1,6 @@
 #coding: utf-8
 
 #значение для автоинкремента
-from Queue import Queue
-from threading import Thread
-
 autoincrement_value = -1
 
 
@@ -40,23 +37,6 @@ class Cluster(object):
 
     def get_dot_graph_str(self, keys):
         return "graph cluster {\n%s\n}" % '\n'.join(self.get_list_of_edges(keys))
-
-
-# def proximity(matrix, R, Q, alpha_A=0.5, alpha_B=0.5, beta=0.0, gamma=-0.5):
-#     """Формула Ланса Вильямса адаптированная в умолчальных настройках
-#     под Complete Link для косинусной меры
-#     """
-#     if R.A and R.B:
-#         #стандартный, сложный случай
-#         res = alpha_A * proximity(matrix, R.A, Q) + alpha_B * proximity(matrix, R.B, Q) + \
-#             beta * proximity(matrix, R.A, R.B) + \
-#             gamma * abs(proximity(matrix, R.A, Q) - proximity(matrix, R.B, Q))
-#     elif Q.A and Q.B:
-#         #стандартный простой случай
-#         res = proximity(matrix, Q, R)
-#     else:
-#         res = matrix[R.index][Q.index]
-#     return res
 
 
 def new_proximity(cluster_matrix, A_index, B_index, Q_index, alpha_A=0.5, alpha_B=0.5, beta=0.0, gamma=-0.5):

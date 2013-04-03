@@ -1,7 +1,6 @@
 #coding: utf-8
 
 import argparse
-import codecs
 import itertools
 
 from nltk import pos_tag, sent_tokenize, word_tokenize, RegexpParser
