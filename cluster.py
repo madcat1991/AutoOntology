@@ -51,7 +51,20 @@ def new_proximity(cluster_matrix, A_index, B_index, Q_index, alpha_A=0.5, alpha_
     return res
 
 
-def get_clusters(matrix):
+def complete_link_proximity(cluster_matrix, A_index, B_index, Q_index):
+    return new_proximity(cluster_matrix, A_index, B_index, Q_index, 0.5, 0.5, 0, -0.5)
+
+
+def simple_link_proximity(cluster_matrix, A_index, B_index, Q_index):
+    return new_proximity(cluster_matrix, A_index, B_index, Q_index, 0.5, 0.5, 0, 0.5)
+
+
+def get_clusters(matrix, clustering_method):
+    """Извлечение кластеров.
+
+    :param matrix: матрица весов
+    :param clustering_method: метод кластеризации
+    """
     clusters = [Cluster(index=index) for index in range(len(matrix))]
     clusters_matrix = matrix
 
@@ -85,7 +98,7 @@ def get_clusters(matrix):
         new_row = [0] * (len(clusters_matrix) + 1)
         new_row[-1] = 1.0
         for index, row in enumerate(clusters_matrix):
-            p = new_proximity(clusters_matrix, best_i, best_j, index)
+            p = clustering_method(clusters_matrix, best_i, best_j, index)
             #колонка
             row.append(p)
             #ряд

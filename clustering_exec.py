@@ -2,7 +2,13 @@
 import argparse
 
 import math
-from cluster import get_clusters
+from cluster import get_clusters, simple_link_proximity, complete_link_proximity
+
+
+METHODS = {
+    "SIMPLE_LINK": simple_link_proximity,
+    "COMPLETE_LINK": complete_link_proximity
+}
 
 
 def prepare_data(file_path, min_count, min_adj_count, delimiter="|"):
@@ -87,12 +93,14 @@ if __name__ == "__main__":
     parser.add_argument("-a", "--min-adj-count", dest="min_adj_count", type=int, default=5,
                         help="Рассматриваюся только существительные, количество связных прилагательных у которых, "
                              "не меньше введеного значения. По умолчанию 5")
+    parser.add_argument("-m", "--method", dest="method", type=str, choices=METHODS.keys(), default="COMPLETE_LINK",
+                        help="Метод кластеризации")
 
     args = parser.parse_args()
 
     data_dict = prepare_data(args.csv_file_path, args.min_count, args.min_adj_count)
     keys_list, matrix = get_nouns_similarity_matrix(data_dict)
-    cluster = get_clusters(matrix)
+    cluster = get_clusters(matrix, METHODS[args.method])
 
     f = open(args.dot_file_path, "w")
     f.write(cluster.get_dot_graph_str(keys_list))
