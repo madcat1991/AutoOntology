@@ -64,5 +64,3 @@ if __name__ == "__main__":
     args = parser.parse_args()
     prepare(args.read_file_path, args.write_file_path, METHODS[args.method],
             args.delimiter, args.text_column, args.count_column)
-
-
