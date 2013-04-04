@@ -25,4 +25,5 @@ if __name__ == "__main__":
     with open(args.output_file, "w") as csv_file:
         csv_writer = csv.writer(csv_file, delimiter="|")
         for key in rd.keys():
-            csv_writer.writerow([key, rd.get(key)])
+            parts = key.split()
+            csv_writer.writerow([parts[1], parts[0], rd.get(key)])
