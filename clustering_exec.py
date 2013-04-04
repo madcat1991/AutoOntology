@@ -1,6 +1,6 @@
 #coding: utf-8
 import argparse
-
+import csv
 import math
 from cluster import get_clusters, single_link_proximity, complete_link_proximity
 
@@ -11,56 +11,54 @@ METHODS = {
 }
 
 
-def prepare_data(file_path, min_count, min_adj_count, delimiter="|"):
-    """Читает файл, содержащий набор прилаг + существительное и собирает словарь следующего типа:
-    {сущ1: {прилаг1: ln(кол-во встреч), прилаг2: ln(кол-во встре),...}, ...}
+def prepare_data(file_path, min_value, min_param_count, obj_column=0, param_column=1, value_column=2, delimiter="|"):
+    """Читает файл, содержащий набор объектов, параметров и их координат. Собирает словарь следующего типа:
+    {obj1: {param1: ln(value1), param2: ln(value2),...}, ...}
 
-    Берутся только комбинации, которые встречаются не менее min_count раз.
-    Из всех существительных, оставляются только те, у которых количество связных прилагательных
-    не менее min_adj_count
+    Берутся только параметры value которых не менее min_value.
+    Из всех объектов, оставляются только те, у которых количество параметров не менее min_param_count
     """
     res = {}
     f = open(file_path, "r")
-    for line in f:
-        parts = line.strip().split(delimiter)
-        if len(parts) >= 2:
-            try:
-                count = int(parts[-1])
-            except TypeError:
-                continue
+    reader = csv.reader(f, delimiter=delimiter)
 
-            if count > min_count:
-                #на случай, если внутри был разделитель
-                phrase = delimiter.join(parts[:-1])
-                phrase_parts = phrase.split()
-                if len(phrase_parts) == 2:
-                    adj, noun = phrase_parts
-                    res.setdefault(noun, {})
-                    res[noun][adj] = math.log(count)
-    for noun in res.keys():
-        if len(res[noun]) < min_adj_count:
-            res.pop(noun)
+    for row in reader:
+        obj = row[obj_column]
+        param = row[param_column]
+        value = float(row[value_column])
+
+        if value > min_value:
+            #на случай, если внутри был разделитель
+            res.setdefault(obj, {})
+            res[obj][param] = math.log(value)
+
+    for obj in res.keys():
+        if len(res[obj]) < min_param_count:
+            res.pop(obj)
+
+    f.close()
+
     return res
 
 
-def word_module(word_dict):
+def obj_length(obj_dict):
     res = 0
-    for key, value in word_dict.items():
+    for key, value in obj_dict.items():
         res += value * value
     return math.sqrt(res)
 
 
-def cosine_similarity(firs_noun_dict, second_noun_dict):
+def cosine_similarity(firs_obj_dict, second_obj_dict):
     up = 0.0
-    for key in firs_noun_dict:
-        if key in second_noun_dict:
-            up += firs_noun_dict[key] * second_noun_dict[key]
+    for key in firs_obj_dict:
+        if key in second_obj_dict:
+            up += firs_obj_dict[key] * second_obj_dict[key]
     if up > 0:
-        return up / (word_module(firs_noun_dict) * word_module(second_noun_dict))
+        return up / (obj_length(firs_obj_dict) * obj_length(second_obj_dict))
     return 0.0
 
 
-def get_nouns_similarity_matrix(data_dict):
+def get_objects_similarity_matrix(data_dict):
     """не забываем, что матрица обратно симметричная
     """
     #легче работать с цифрами
@@ -72,11 +70,10 @@ def get_nouns_similarity_matrix(data_dict):
     for i in range(keys_length):
         matrix.append([0] * keys_length)
         for j in range(i + 1):
-            first_noun_dict = data_dict[keys[i]]
-            second_noun_dict = data_dict[keys[j]]
-            cos_sim = cosine_similarity(first_noun_dict, second_noun_dict)
+            first_obj_dict = data_dict[keys[i]]
+            second_obj_dict = data_dict[keys[j]]
+            cos_sim = cosine_similarity(first_obj_dict, second_obj_dict)
             matrix[i][j] = matrix[j][i] = cos_sim
-
     return keys, matrix
 
 
@@ -84,25 +81,32 @@ if __name__ == "__main__":
     import sys
     sys.setrecursionlimit(10000)
 
-    parser = argparse.ArgumentParser()
-
+    parser = argparse.ArgumentParser(description="Скрипт кластеризующий данные по входному csv-файлу вида: "
+                                                 "obj | param | value")
     parser.add_argument("-c", "--csv-file", dest="csv_file_path", type=str, required=True,
-                        help="Путь до файла с csv")
+                        help="Путь до csv-файла с данными")
     parser.add_argument("-d", "--dot-file", dest="dot_file_path", type=str, required=True,
                         help="Файл в который будет сохранено dot-представление кластера")
-    parser.add_argument("-t", "--min-count", dest="min_count", type=int, default=1,
-                        help="Берутся только комбинации, количества встреч которых не меньше введенного значения."
-                             "По умолчанию 1")
-    parser.add_argument("-a", "--min-adj-count", dest="min_adj_count", type=int, default=5,
-                        help="Рассматриваюся только существительные, количество связных прилагательных у которых, "
-                             "не меньше введеного значения. По умолчанию 5")
+    parser.add_argument("-v", "--min-value", dest="min_value", type=int, default=1,
+                        help="Берутся только параметры значения которых не меньше заданного. По умолчанию 1")
+    parser.add_argument("-p", "--min-param-count", dest="min_param_count", type=int, default=5,
+                        help="Рассматриваюся только объекты количество параметров у которых "
+                             "не меньше заданного. По умолчанию 5")
     parser.add_argument("-m", "--method", dest="method", type=str, choices=METHODS.keys(), default="COMPLETE_LINK",
-                        help="Метод кластеризации")
+                        help="Метод кластеризации. По умолчанию COMPLETE_LINK")
+
+    parser.add_argument("-o", "--obj_column", dest="obj_column", default=0, type=int,
+                        help="Колонка с объектом. По умолчанию 0")
+    parser.add_argument("-a", "--param_column", dest="param_column", default=1, type=int,
+                        help="Колонка с параметром. По умолчанию 1")
+    parser.add_argument("-l", "--value_column", dest="value_column", default=2, type=int,
+                        help="Колонка со значением параметра. По умолчанию 2")
 
     args = parser.parse_args()
 
-    data_dict = prepare_data(args.csv_file_path, args.min_count, args.min_adj_count)
-    keys_list, matrix = get_nouns_similarity_matrix(data_dict)
+    data_dict = prepare_data(args.csv_file_path, args.min_value, args.min_param_count,
+                             args.obj_column, args.param_column, args.value_column)
+    keys_list, matrix = get_objects_similarity_matrix(data_dict)
     cluster = get_clusters(matrix, METHODS[args.method])
 
     f = open(args.dot_file_path, "w")
