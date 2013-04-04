@@ -1,2 +1,3 @@
 nltk==2.0.4
 pymorphy==0.5.6
+redis
