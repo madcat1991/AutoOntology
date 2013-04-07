@@ -101,13 +101,15 @@ if __name__ == "__main__":
                         help="Колонка с параметром. По умолчанию 1")
     parser.add_argument("-l", "--value_column", dest="value_column", default=2, type=int,
                         help="Колонка со значением параметра. По умолчанию 2")
+    parser.add_argument("--count_cpcc", dest="count_cpcc", help="Считать Cophenetic Correlation Coefficient",
+                        action="store_true")
 
     args = parser.parse_args()
 
     data_dict = prepare_data(args.csv_file_path, args.min_value, args.min_param_count,
                              args.obj_column, args.param_column, args.value_column)
     keys_list, matrix = get_objects_similarity_matrix(data_dict)
-    cluster = get_clusters(matrix, METHODS[args.method])
+    cluster = get_clusters(matrix, METHODS[args.method], args.count_cpcc)
 
     f = open(args.dot_file_path, "w")
     f.write(cluster.get_dot_graph_str(keys_list))
